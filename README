@@ -1,0 +1,64 @@
+OVERVIEW
+--------
+
+Shadowfs is a FUSE filesystem that is used to "shadow" a filesystem
+directory to another location. All read operations access the master
+location, while modifications are written to both the master and the
+secondary locations. 
+
+One typical use case would be a developer who wants to have source
+code on a laptop's local hard drive, but the code needs to be built
+and/or run on a remote system. By NFS mounting the remote drive and
+using shadowfs, then all read operations are fast but edits go to the
+remote location.
+
+INSTALLATION
+------------
+Make sure that you have a recent version of FUSE installed with all
+development headers and libraries.
+
+Run 'make' to build.
+
+CONFIGURATION
+-------------
+To set up shadowfs for use on a laptop to shadow some number of
+directories from the user's local home directory to the NFS home
+directory, assume a Mac with an NFS mounted location called 'my-nfs'
+on which the user's home directory is accessible at /u/username.
+
+USERNAME=username
+LOCALHOME=/Users/$USERNAME
+NFSHOME=/u/$USERNAME
+NFSMOUNT=/Volumes/my-nfs/$USERNAME
+
+The goal is to have a shadowed directory 'foo' to be accessible using
+the path /u/$USERNAME/foo on both the laptop and the remote system.
+This directory path maps to the shadowfs directory on the laptop but
+the nfs backed directory on other machines. This lets you have source
+code in the shadowfs directory but to be able to run builds on remote
+machines.
+
+Initial setup steps:
+
+ln -s /Users /u
+mkdir $LOCALHOME/shadowfs_data
+mkdir $LOCALHOME/shadowfs_data/.config
+mkdir $LOCALHOME/shadowfs
+
+For now the process of setting up shadowed directories is manual. So
+assuming that you have some directory 'foo' in $LOCALHOME that you
+want to be shadowed to $NFSMOUNT, do the following:
+
+rsync -rav $LOCALHOME/foo $NFSMOUNT/foo
+mv $LOCALHOME/foo $LOCALHOME/shadowfs_data/foo
+ln -s $LOCALHOME/shadowfs/foo $LOCALHOME/foo
+cd $LOCALHOME/shadowfs_data/.config
+ln -s $NFSMOUNT/foo
+
+Now restart shadowfs (see run_shadowfs.sh script).
+
+shadowfs $* -oallow_other -odefault_permissions -s /u/$USER/shadowfs/
+
+If all goes well, you should now see the contents of directory
+$LOCALHOME/foo mirrored to both $LOCALHOME/shadowfs_data/foo and
+$NFSMOUNT/foo.
