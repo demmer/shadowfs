@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Michael Demmer <demmer@gmail.com>
+ * Copyright (c) 2009-2013 Riverbed Technology, Inc.
  *
  * This file is part of Shadowfs
  *
