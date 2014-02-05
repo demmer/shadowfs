@@ -18,6 +18,7 @@
  */
 
 #include "shadowfs.h"
+#include <cstdlib>
 #include <signal.h>
 #include <fuse/fuse_lowlevel.h>
 

@@ -75,7 +75,7 @@ inline std::string root_dir(const char* path)
     assert(path[0] == '/');
     path += 1;
     
-    char* slash = strchr(path, '/');
+    const char* slash = strchr(path, '/');
     if (slash) {
         return std::string(path, slash - path);
     } else {
