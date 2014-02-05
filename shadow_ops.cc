@@ -27,7 +27,7 @@ struct ShadowFileState {
 };
 
 static bool fake_symlink(const char* path) {
-    char* tail = strrchr(path, '/');
+    const char* tail = strrchr(path, '/');
     if (tail && !strcmp(tail, "/.git")) {
         return true;
     }

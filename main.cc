@@ -18,6 +18,7 @@
  */
 
 #include "shadowfs.h"
+#include <cstdlib>
 #include <signal.h>
 
 MountTable _mtab;

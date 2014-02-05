@@ -18,6 +18,8 @@
  */
 
 #include "shadowfs.h"
+#include <algorithm>
+#include <dirent.h>
 #include <fuse/fuse_lowlevel.h>
 #include <map>
 #include <vector>
@@ -786,8 +788,13 @@ shadow_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
         }
 
         off = telldir(dir);
-        memcpy(name, ent->d_name, ent->d_namlen);
-        name[ent->d_namlen] = '\0';
+#ifdef __APPLE__
+        size_t namlen = ent->d_namlen;
+#else
+        size_t namlen = _D_EXACT_NAMLEN(ent);
+#endif
+        memcpy(name, ent->d_name, namlen);
+        name[namlen] = '\0';
 
         dsyslog("readdir(%lu): offset %llu adding entry %s (%zu/%zu remaining)\n",
                 ino, off, name, size, bufsize);
