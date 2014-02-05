@@ -43,7 +43,7 @@ struct ShadowInodeState {
 };
 
 #define WRAPPED_SYSCALL(_syscall, _path, _args...)                      \
-{                                                                       \
+do {                                                                    \
     dsyslog("%s %s ...\n", #_syscall, _path);                           \
     int res = _syscall(_path, _args);                                   \
     if (res != 0) {                                                     \
@@ -51,7 +51,7 @@ struct ShadowInodeState {
         fuse_reply_err(req, errno);                                     \
         return;                                                         \
     }                                                                   \
-}
+} while (0)
 
 typedef std::map<int, ShadowInodeState*> InodeMap;
 InodeMap inode_map_;
@@ -617,7 +617,7 @@ shadow_ll_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
     std::string local_path1 = DATA_DIR + state->path_;
     std::string local_path2 = DATA_DIR + newpath;
 
-    dsyslog("link: hard link %s -> %s\n", newpath.c_str(), state->path_.c_str())
+    dsyslog("link: hard link %s -> %s\n", newpath.c_str(), state->path_.c_str());
     WRAPPED_SYSCALL(link, local_path1.c_str(), local_path2.c_str());
 
     struct fuse_entry_param ent;
