@@ -97,7 +97,7 @@ extern void toggle_all_offline(int);
 
 extern FILE* debugfd;
 extern int debug;
-//#define dsyslog(args...) if (debug) { syslog(LOG_NOTICE, args); }
-#define dsyslog(args...) if (debug) { fprintf(debugfd, args); }
+//#define dsyslog(args...) do { if (debug) { syslog(LOG_NOTICE, args); } } while (0)
+#define dsyslog(args...) do { if (debug) { fprintf(debugfd, args); } } while (0)
 
 #endif /* _SHADOWFS_H_ */
