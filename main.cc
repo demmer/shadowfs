@@ -73,6 +73,7 @@ static void toggle_debug(int signo) {
     if (! debug)  {
         syslog(LOG_NOTICE, "enabling debug mode");
         debugfd = fopen("/tmp/shadowfs.log", "a");
+        setlinebuf(debugfd);
         debug = 1;
     } else {
         syslog(LOG_NOTICE, "disabling debug mode");
