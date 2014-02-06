@@ -390,11 +390,6 @@ shadow_ll_create(fuse_req_t req, fuse_ino_t parent, const char *name,
     
     std::string local_path = DATA_DIR + path;
 
-    // XXX
-    if (strstr(local_path.c_str(), ".git")) {
-        mode |= S_IWUSR;
-    }
-
     dsyslog("create(%s): opening file flags %o mode %o\n",
             local_path.c_str(), fi->flags, mode);
     int fd = open(local_path.c_str(), fi->flags | O_CREAT | O_EXCL, mode);
@@ -435,11 +430,6 @@ shadow_ll_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
     }
     
     std::string local_path = DATA_DIR + path;
-
-    // XXX
-    if (strstr(local_path.c_str(), ".git")) {
-        mode |= S_IWUSR;
-    }
 
     WRAPPED_SYSCALL(mkdir, local_path.c_str(), mode);
 
