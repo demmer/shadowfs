@@ -125,7 +125,7 @@ del_link(ShadowInodeState* state, const char* name)
         if (lvi == state->links_.end()) {
             // XXX error??
             dsyslog("del_link: error can't find link %s for inode %llu\n",
-                    name, state->attr.st_ino);
+                    name, static_cast<unsigned long long>(state->attr.st_ino));
             return false;
         }
 
@@ -151,12 +151,14 @@ gen_entry(fuse_entry_param* ent, const char* op, fuse_ino_t parent,
     if (state) {
         if (must_create) {
             dsyslog("gen_entry(%s) error: inode %llu exists for parent %lu path %s\n",
-                    op, ent->attr.st_ino, parent, path.c_str());
+                    op, static_cast<unsigned long long>(ent->attr.st_ino),
+                    parent, path.c_str());
             return EEXIST;
         }
         assert(state->attr.st_ino == ent->attr.st_ino);
         dsyslog("gen_entry(%s): parent inode %lu path %s: found existing entry %llu\n",
-                op, parent, local_path.c_str(), state->attr.st_ino);
+                op, parent, local_path.c_str(),
+                static_cast<unsigned long long>(state->attr.st_ino));
         
         bool add_path = add_link(state, path.c_str());
         if (add_path) {
@@ -168,7 +170,8 @@ gen_entry(fuse_entry_param* ent, const char* op, fuse_ino_t parent,
         path_map_[path] = state;
     
         dsyslog("gen_entry(%s) parent inode %lu path %s... created %s -> %llu\n",
-                op, parent, path.c_str(), local_path.c_str(), ent->attr.st_ino);
+                op, parent, path.c_str(), local_path.c_str(),
+                static_cast<unsigned long long>(ent->attr.st_ino));
     }
 
     // always refresh the state attributes
@@ -254,7 +257,8 @@ shadow_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 static void
 del_state(ShadowInodeState* state)
 {
-    dsyslog("del_state %s ino %llu\n", state->path_.c_str(), state->attr.st_ino);
+    dsyslog("del_state %s ino %llu\n", state->path_.c_str(),
+            static_cast<unsigned long long>(state->attr.st_ino));
     
     inode_map_.erase(state->attr.st_ino);
 
@@ -476,7 +480,8 @@ unlink_or_rmdir(const char* op, fuse_req_t req, fuse_ino_t parent, const char *n
     ShadowInodeState* state2 = lookup_by_inode(state->attr.st_ino);
     if (!state2) {
         dsyslog("%s: no entry for path %s inode %llu in inode table\n",
-                op, path.c_str(), state->attr.st_ino);
+                op, path.c_str(),
+                static_cast<unsigned long long>(state->attr.st_ino));
         // XXX???
         fuse_reply_err(req, ENOENT);
         return;
@@ -797,7 +802,7 @@ shadow_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
         name[namlen] = '\0';
 
         dsyslog("readdir(%lu): offset %llu adding entry %s (%zu/%zu remaining)\n",
-                ino, off, name, size, bufsize);
+                ino, static_cast<unsigned long long>(off), name, size, bufsize);
         
         st.st_ino = ino;
         st.st_mode = DTTOIF(ent->d_type);
@@ -832,7 +837,7 @@ shadow_ll_releasedir(fuse_req_t req, fuse_ino_t ino,
         return;
     }
 
-    fi->fh = NULL;
+    fi->fh = static_cast<uint64_t>(NULL);
     fuse_reply_err(req, 0);
 }
 

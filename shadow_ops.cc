@@ -460,7 +460,7 @@ static int shadow_open(const char *path, struct fuse_file_info *fi)
         // properly call release() on the old file handle. The safe
         // thing to do is to keep the ShadowFileState object around,
         // but close the open file descriptors.
-        syslog(LOG_ERR, "file %s opened multiple times (info %p)\n", path, info);
+        //syslog(LOG_ERR, "file %s opened multiple times (info %p)\n", path, info);
         /*
         if (close(info->local_fd) != 0) {
             syslog(LOG_ERR, "error in close(%d): %s\n",
