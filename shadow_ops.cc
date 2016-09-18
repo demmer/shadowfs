@@ -26,15 +26,6 @@ struct ShadowFileState {
     bool offline;
 };
 
-static bool fake_symlink(const char* path) {
-    const char* tail = strrchr(path, '/');
-    if (tail && !strcmp(tail, "/.git")) {
-        return true;
-    }
-
-    return false;
-}
-
 typedef std::map<std::string, ShadowFileState*> OpenFileTable;
 OpenFileTable open_files_;
 
@@ -48,11 +39,6 @@ static int shadow_getattr(const char *path, struct stat *stbuf)
     if (res == -1)
         return -errno;
 
-    if (fake_symlink(path)) {
-        stbuf->st_mode &= ~S_IFMT;
-        stbuf->st_mode |= S_IFLNK;
-    }
-    
     return 0;
 }
 
@@ -72,11 +58,6 @@ static int shadow_access(const char *path, int mask)
 static int shadow_readlink(const char *path, char *buf, size_t size)
 {
     std::string local_path = DATA_DIR + path;
-    
-    if (fake_symlink(path)) {
-        strncpy(buf, local_path.c_str(), size);
-        return 0;
-    }
     
     int res;
 
@@ -123,11 +104,6 @@ static int shadow_mknod(const char *path, mode_t mode, dev_t rdev)
 
     int res;
 
-    // XXX
-    if (strstr(path, ".git")) {
-        mode |= S_IWUSR;
-    }
-
     /* On Linux this could just be 'mknod(path, mode, rdev)' but this
        is more portable */
     if (S_ISREG(mode)) {
@@ -165,6 +141,73 @@ static int shadow_mknod(const char *path, mode_t mode, dev_t rdev)
                 shadow_path.c_str(), strerror(errno));
     
     chown(shadow_path.c_str(), ctx->uid, ctx->gid);
+    return 0;
+}
+
+static int shadow_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    std::string local_path = DATA_DIR + path;
+
+    ShadowFileState* info;
+    int fd;
+
+    OpenFileTable::iterator iter = open_files_.find(std::string(path));
+    if (iter != open_files_.end()) {
+        // Something got screwed up in the fuse layer and it didn't
+        // properly call release() on the old file handle. The safe
+        // thing to do is to keep the ShadowFileState object around,
+        // but close the open file descriptors.
+        //syslog(LOG_ERR, "file %s opened multiple times (info %p)\n", path, info);
+        /*
+        if (close(info->local_fd) != 0) {
+            syslog(LOG_ERR, "error in close(%d): %s\n",
+                   info->local_fd, strerror(errno));
+        }
+
+        if (info->shadow_fd != -1 && close(info->shadow_fd) != 0) {
+            syslog(LOG_ERR, "error in close(%d): %s\n",
+                   info->shadow_fd, strerror(errno));
+        }
+        */
+    }
+
+    fd = creat(local_path.c_str(), mode);
+    // TODO remove flags?
+    dsyslog("creat(%s) 0x%x returned %d\n", local_path.c_str(), fi->flags, fd);
+    if (fd == -1)
+        return -errno;
+
+    info = new ShadowFileState();
+    fi->fh = (uint64_t)info;
+
+    info->local_fd  = fd;
+    info->shadow_fd = -1;
+    info->offline   = false;
+
+    open_files_[std::string(path)] = info;
+
+    if ((fi->flags & O_ACCMODE) == O_RDONLY) {
+        dsyslog("creat(%s) write-mode not set\n", local_path.c_str());
+        return 0;
+    }
+
+    if (is_offline(path)) {
+        info->offline = true;
+        return 0;
+    }
+
+    std::string shadow_path = get_shadow_path(path);
+
+    fd = creat(shadow_path.c_str(), fi->flags);
+    dsyslog("shadow creat(%s) returned %d\n", shadow_path.c_str(), fd);
+
+    if (fd == -1) {
+        syslog(LOG_ERR, "error in shadow creat(%s): %s\n",
+                shadow_path.c_str(), strerror(errno));
+    } else {
+        info->shadow_fd = fd;
+    }
+
     return 0;
 }
 
@@ -687,6 +730,7 @@ void init_shadow_ops()
     shadow_ops.readlink	= shadow_readlink;
     shadow_ops.readdir	= shadow_readdir;
     shadow_ops.mknod		= shadow_mknod;
+    shadow_ops.create       = shadow_create;
     shadow_ops.mkdir		= shadow_mkdir;
     shadow_ops.symlink	= shadow_symlink;
     shadow_ops.unlink		= shadow_unlink;

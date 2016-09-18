@@ -167,6 +167,31 @@ static int dispatch_mknod(const char *path, mode_t mode, dev_t rdev)
     return ret;
 }        
 
+static int do_dispatch_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    struct fuse_operations* ops = dispatch(path);
+    if (ops == NULL) {
+        return -ENOENT;
+    }
+
+    if (ops->create == NULL) {
+        return -ENOSYS;
+    }
+    return ops->create(path, mode, fi);
+}
+
+static int dispatch_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    dsyslog("create(%s)...\n", path);
+    int ret = do_dispatch_create(path, mode, fi);
+    if (ret >= 0) {
+        dsyslog("create(%s)... OK (ret == %d)\n", path, ret);
+    } else {
+        dsyslog("create(%s)... ERROR %s\n", path, strerror(-ret));
+    }
+    return ret;
+}
+
 static int do_dispatch_mkdir(const char *path, mode_t mode)
 {
     struct fuse_operations* ops = dispatch(path);
@@ -663,6 +688,7 @@ void init_dispatch_ops()
     dispatch_ops.readlink	= dispatch_readlink;
     dispatch_ops.readdir	= dispatch_readdir;
     dispatch_ops.mknod		= dispatch_mknod;
+    dispatch_ops.create		= dispatch_create;
     dispatch_ops.mkdir		= dispatch_mkdir;
     dispatch_ops.symlink	= dispatch_symlink;
     dispatch_ops.unlink		= dispatch_unlink;
