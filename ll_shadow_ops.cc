@@ -608,6 +608,10 @@ shadow_ll_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
     
     std::string newpath;
     int err = resolve_path(newparent, newname, &newpath);
+    if (err != 0) {
+        fuse_reply_err(req, err);
+        return;
+    }
     
     std::string local_path1 = DATA_DIR + state->path_;
     std::string local_path2 = DATA_DIR + newpath;
@@ -708,6 +712,7 @@ shadow_ll_release(fuse_req_t req, fuse_ino_t ino,
     if (!state) {
         dsyslog("release(%lu)... no inode in map\n", ino);
         fuse_reply_err(req, ENOENT);
+        return;
     }
 
     if (state->local_fd_ == 0) {
